@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Pantry</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;600;700&display=swap');
+
+:root {
+  --bg: #faf6f0;
+  --surface: #ffffff;
+  --surface2: #f5f0e8;
+  --border: #e8ddd0;
+  --ink: #2d1f14;
+  --ink-mid: #8a7060;
+  --ink-dim: #c4b5a5;
+  --green: #5a8a5a;
+  --orange: #c8521a;
+  --red: #c0392b;
+  --yellow: #c8941a;
+  --accent: #c8521a;
+  --tab-h: 68px;
+  --header-h: 60px;
+  --budget-h: 60px;
+  --sans: 'Nunito', sans-serif;
+  --display: 'Playfair Display', Georgia, serif;
+  --radius: 18px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+}
+
+/* ── Layout shell ── */
+#app { height: 100%; display: flex; flex-direction: column; }
+
+#header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 1px 8px rgba(180,120,80,0.07);
+}
+#header h1 {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+#header h1 .logo-basket { font-size: 22px; }
+#header h1 .logo-text em { font-style: italic; color: var(--accent); }
+
+.header-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+
+#budget-strip {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  gap: 0;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: var(--budget-h);
+}
+.bstat { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.bstat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mid); font-family: var(--sans); font-weight: 600; }
+.bstat-val { font-family: var(--display); font-size: 18px; font-style: italic; }
+.bstat-val.good { color: var(--green); }
+.bstat-val.warn { color: var(--orange); }
+.bstat-val.over { color: var(--red); }
+.bdivider { width: 1px; background: var(--border); height: 32px; margin: 0 12px; }
+
+.progress-bar-wrap { width: 100%; }
+.progress-bar-track { background: var(--border); border-radius: 2px; height: 3px; margin-top: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 0.4s; }
+.progress-bar-fill.over { background: var(--accent); }
+
+/* ── Main scroll area ── */
+#main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tab-h) + 16px);
+}
+
+/* ── Bottom tab bar ── */
+#tabbar {
+  height: var(--tab-h);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 12px rgba(180,120,80,0.08);
+}
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--ink-dim);
+  transition: color 0.15s;
+  padding: 6px 4px 8px;
+}
+.tab-btn.active { color: var(--accent); }
+.tab-btn .tab-icon { font-size: 20px; line-height: 1; }
+.tab-btn .tab-label { font-family: var(--sans); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Screens ── */
+.screen { display: none; padding: 16px 16px 0; animation: fadeUp 0.2s ease; }
+.screen.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 12px rgba(180,120,80,0.06);
+}
+.card-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink-mid);
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Forms ── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mid); margin-bottom: 5px; }
+input[type=text], input[type=number], input[type=date], select, textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 14px;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,82,26,0.1); }
+textarea { resize: none; min-height: 72px; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a9088' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Buttons ── */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.18s;
+  -webkit-appearance: none;
+}
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 3px 12px rgba(200,82,26,0.25); }
+.btn-primary:active { background: #a8401a; box-shadow: none; }
+.btn-secondary { background: var(--surface2); color: var(--ink); border: 1px solid var(--border); }
+.btn-secondary:active { background: var(--border); }
+.btn-red { background: #fdf0ee; color: var(--red); border: 1px solid #f0c0b8; }
+.btn-sm { padding: 10px 14px; font-size: 12px; width: auto; border-radius: var(--radius-sm); }
+
+/* ── Photo upload zone ── */
+#uploadZone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+  background: var(--surface2);
+}
+#uploadZone.dragover { border-color: var(--accent); background: rgba(200,82,26,0.05); }
+#uploadZone .upload-icon { font-size: 44px; margin-bottom: 10px; }
+#uploadZone p { color: var(--ink-mid); font-size: 14px; font-family: var(--sans); }
+#uploadZone p strong { color: var(--ink); font-weight: 700; }
+#fileInput { display: none; }
+
+#previewWrap { display: none; margin-bottom: 12px; position: relative; }
+#previewImg { width: 100%; border-radius: var(--radius); max-height: 220px; object-fit: cover; }
+#clearPreview { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); border: none; border-radius: 50%; width: 28px; height: 28px; color: white; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* ── AI result card ── */
+#aiResult { display: none; }
+.ai-field-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.ai-field-row:last-child { border-bottom: none; }
+.ai-field-row .afl { color: var(--ink-mid); font-size: 12px; }
+.ai-field-row .afv { font-weight: 400; text-align: right; flex: 1; margin-left: 12px; }
+.ai-field-row .afv.editable { background: var(--surface2); border-radius: 6px; padding: 4px 8px; border: 1px solid transparent; outline: none; width: 100%; text-align: right; }
+.ai-field-row .afv.editable:focus { border-color: var(--green); }
+
+/* ── Receipt list ── */
+.receipt-item {
+  display: flex;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.receipt-item:last-child { border-bottom: none; }
+.receipt-icon { width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.receipt-info { flex: 1; min-width: 0; }
+.receipt-store { font-family: var(--display); font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.receipt-meta { font-size: 12px; color: var(--ink-mid); margin-top: 2px; }
+.receipt-amt { font-family: var(--display); font-weight: 600; font-size: 17px; flex-shrink: 0; }
+
+/* ── Waste log ── */
+.waste-item {
+  display: flex;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.waste-item:last-child { border-bottom: none; }
+.waste-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+.waste-info { flex: 1; }
+.waste-name { font-weight: 400; font-size: 15px; }
+.waste-meta { font-size: 12px; color: var(--ink-mid); margin-top: 2px; }
+.waste-cost { font-family: var(--display); font-weight: 600; color: var(--red); flex-shrink: 0; }
+.waste-del { background: none; border: none; color: var(--ink-dim); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+/* ── Recent purchases (for waste one-tap) ── */
+.purchase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin: 3px;
+  transition: all 0.15s;
+}
+.purchase-chip:active { background: #3a1a1a; border-color: var(--red); color: var(--red); }
+.chip-store { font-size: 10px; color: var(--ink-mid); }
+
+/* ── Shopping list ── */
+.list-section-head {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mid);
+  padding: 14px 0 6px;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  position: relative;
+}
+.list-item:last-child { border-bottom: none; }
+.check-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  color: transparent;
+}
+.check-btn.checked { background: var(--green); border-color: var(--green); color: #0f0f0f; }
+.list-item-name { flex: 1; font-size: 15px; transition: all 0.15s; }
+.list-item-name.done { text-decoration: line-through; color: var(--ink-dim); }
+.list-item-qty { font-size: 12px; color: var(--ink-mid); flex-shrink: 0; }
+.list-item-del { background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer; padding: 4px; }
+
+/* ── Shopping MODE ── */
+#shopMode {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--surface2);
+  z-index: 1000;
+  flex-direction: column;
+}
+#shopMode.open { display: flex; }
+#shopMode-header {
+  padding: 16px 18px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#shopMode-header h2 { font-family: var(--display); font-size: 18px; font-weight: 800; flex: 1; }
+#shopMode-close { background: var(--surface2); border: none; border-radius: 50%; width: 36px; height: 36px; color: var(--ink); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#shopMode-body { flex: 1; overflow-y: auto; padding: 0 16px 24px; -webkit-overflow-scrolling: touch; }
+#shopMode-progress { padding: 10px 18px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--ink-mid); display: flex; justify-content: space-between; align-items: center; }
+#shopMode-progress .done-count { font-family: var(--display); font-weight: 600; color: var(--green); font-size: 15px; }
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  cursor: pointer;
+}
+.shop-item:active { opacity: 0.7; }
+.shop-check { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: none; display: flex; align-items: center; justify-content: center; font-size: 18px; color: transparent; flex-shrink: 0; transition: all 0.15s; }
+.shop-check.checked { background: var(--green); border-color: var(--green); color: #0f0f0f; }
+.shop-name { flex: 1; font-size: 17px; font-weight: 300; transition: all 0.15s; }
+.shop-name.done { text-decoration: line-through; color: var(--ink-dim); }
+.shop-qty { font-size: 14px; color: var(--ink-mid); }
+
+/* ── Staples ── */
+.staple-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 13px;
+  margin: 3px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.staple-del { color: var(--ink-dim); font-size: 16px; line-height: 1; }
+
+/* ── Insights ── */
+.insight-top {
+  background: linear-gradient(135deg, #fdf3ee, #fff8f4);
+  border: 1px solid #f0d0c0;
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 12px rgba(200,82,26,0.08);
+}
+.insight-top .it-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 6px; font-weight: 700; }
+.insight-top .it-text { font-size: 15px; line-height: 1.6; font-family: var(--display); font-style: italic; color: var(--ink); }
+
+.pattern-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.pattern-row:last-child { border-bottom: none; }
+.pattern-row h4 { font-size: 14px; margin-bottom: 3px; }
+.pattern-row p { font-size: 12px; color: var(--ink-mid); line-height: 1.5; }
+
+/* ── Tags ── */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.tag-produce { background: #e8f5e8; color: #3a6e3a; }
+.tag-protein { background: #fdeee8; color: #a8401a; }
+.tag-dairy { background: #e8f0f8; color: #3a5a8a; }
+.tag-pantry { background: #fdf5e0; color: #8a6a1a; }
+.tag-frozen { background: #e8f4f8; color: #2a6a8a; }
+.tag-other { background: var(--surface2); color: var(--ink-mid); }
+
+/* ── Spinner ── */
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: calc(var(--tab-h) + 16px); left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--ink); color: var(--bg);
+  border-radius: var(--radius-sm); padding: 11px 20px;
+  font-size: 13px; white-space: nowrap; font-family: var(--sans); font-weight: 600;
+  opacity: 0; transition: all 0.25s; z-index: 999; pointer-events: none;
+  box-shadow: 0 4px 20px rgba(45,31,20,0.2);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Setup screen ── */
+.setup-section { font-family: var(--display); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--green); margin: 20px 0 10px; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--ink-mid); }
+.empty .ei { font-size: 40px; margin-bottom: 10px; }
+.empty p { font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <h1><span class="logo-basket">🧺</span><span class="logo-text">Pan<em>try</em></span></h1>
+    <button class="header-btn" onclick="openShopMode()" title="Shopping mode">🛒</button>
+    <button class="header-btn" onclick="showTab('setup')" title="Settings">⚙</button>
+  </div>
+
+  <!-- Budget strip -->
+  <div id="budget-strip">
+    <div class="bstat">
+      <span class="bstat-label">Spent</span>
+      <span class="bstat-val" id="bs-spent">$0</span>
+    </div>
+    <div class="bdivider"></div>
+    <div class="bstat">
+      <span class="bstat-label">Budget</span>
+      <span class="bstat-val" id="bs-budget">—</span>
+    </div>
+    <div class="bdivider"></div>
+    <div class="bstat" style="flex:1.4">
+      <div style="display:flex;justify-content:space-between">
+        <span class="bstat-label">Left</span>
+        <span class="bstat-label" id="bs-pct">0%</span>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="bs-bar" style="width:0%"></div></div>
+      <span class="bstat-val" id="bs-rem" style="margin-top:2px">—</span>
+    </div>
+    <div class="bdivider"></div>
+    <div class="bstat">
+      <span class="bstat-label">Wasted</span>
+      <span class="bstat-val warn" id="bs-waste">$0</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+
+    <!-- ── RECEIPTS screen ── -->
+    <div class="screen active" id="screen-receipts">
+
+      <!-- Upload zone -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="card" style="margin:0;border:none;background:transparent;border-radius:0;border-bottom:1px solid var(--border)">
+          <div class="card-title">Scan Receipt</div>
+          <div id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📷</div>
+            <p><strong>Tap to upload a photo</strong></p>
+            <p>Camera · Photo library · Screenshots</p>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" onchange="handleFile(this)">
+          <div id="previewWrap">
+            <img id="previewImg" src="" alt="Receipt preview">
+            <button id="clearPreview" onclick="clearPreview()">✕</button>
+          </div>
+          <button class="btn btn-primary" id="scanBtn" onclick="scanReceipt()" style="display:none">
+            <div class="spinner" id="scanSpinner" style="display:none"></div>
+            <span id="scanBtnText">✦ Scan with AI</span>
+          </button>
+          <div id="scanError" style="display:none;margin-top:10px;background:#3a1a1a;border:1px solid var(--red);border-radius:8px;padding:12px;font-size:12px;color:var(--red);word-break:break-all;line-height:1.5"></div>
+        </div>
+
+        <div id="aiResult" style="padding:16px">
+          <div class="card-title">AI extracted — tap to edit</div>
+          <div class="ai-field-row"><span class="afl">Store</span><input class="afv editable" id="ai-store" type="text"></div>
+          <div class="ai-field-row"><span class="afl">Date</span><input class="afv editable" id="ai-date" type="date"></div>
+          <div class="ai-field-row"><span class="afl">Total</span><input class="afv editable" id="ai-total" type="number" step="0.01"></div>
+          <div class="ai-field-row" style="flex-direction:column;align-items:flex-start;gap:8px;border-bottom:none">
+            <span class="afl">Spend by Category — tap to edit</span>
+            <div id="breakdown-fields" style="width:100%"></div>
+          </div>
+          <div class="ai-field-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <span class="afl">Items noted</span>
+            <input class="afv editable" id="ai-items" type="text" style="text-align:left;width:100%">
+          </div>
+          <div id="bd-diff" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="saveAiReceipt()">Save Receipt</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetScan()">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receipt history -->
+      <div class="card">
+        <div class="card-title">History</div>
+        <div id="receiptList"><div class="empty"><div class="ei">🧾</div><p>No receipts yet.<br>Scan your first one above.</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── WASTE screen ── -->
+    <div class="screen" id="screen-waste">
+
+      <!-- One-tap from recent -->
+      <div class="card" id="recentPurchasesCard" style="display:none">
+        <div class="card-title">Tap a recent item to mark wasted</div>
+        <div id="recentChips"></div>
+      </div>
+
+      <!-- Manual log -->
+      <div class="card">
+        <div class="card-title">Log Waste Manually</div>
+        <div class="field">
+          <label>Item</label>
+          <input type="text" id="w-item" placeholder="e.g. baby spinach">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Cost ($)</label>
+            <input type="number" id="w-cost" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="w-date">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Reason</label>
+            <select id="w-reason">
+              <option value="forgot">Forgot it was there</option>
+              <option value="toomuch">Bought too much</option>
+              <option value="expired">Expired fast</option>
+              <option value="mealchange">Changed plans</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select id="w-cat">
+              <option value="produce">Produce</option>
+              <option value="protein">Protein</option>
+              <option value="dairy">Dairy</option>
+              <option value="pantry">Pantry</option>
+              <option value="frozen">Frozen</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-red" onclick="addWaste()">+ Log Waste</button>
+      </div>
+
+      <!-- Waste list -->
+      <div class="card">
+        <div class="card-title">Waste Log</div>
+        <div id="wasteList"><div class="empty"><div class="ei">🗑</div><p>Nothing wasted yet.<br>Keep it up!</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── LIST screen ── -->
+    <div class="screen" id="screen-list">
+      <!-- Add item -->
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="text" id="li-name" placeholder="Add item…" style="flex:1" onkeydown="if(event.key==='Enter')addListItem()">
+          <input type="text" id="li-qty" placeholder="Qty" style="width:68px">
+        </div>
+        <div class="row2" style="margin-bottom:10px">
+          <select id="li-cat">
+            <option value="produce">🥦 Produce</option>
+            <option value="protein">🥩 Protein</option>
+            <option value="dairy">🧀 Dairy</option>
+            <option value="pantry">🫙 Pantry</option>
+            <option value="frozen">🧊 Frozen</option>
+            <option value="other">📦 Other</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="addListItem()">+ Add</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="loadStaples()">↓ Load staples</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearChecked()">✕ Clear checked</button>
+          <button class="btn btn-secondary btn-sm" onclick="openShopMode()">🛒 Shop mode</button>
+        </div>
+      </div>
+
+      <!-- Staple forget reminders -->
+      <div id="forgetReminder" style="display:none" class="card" style="border-color:#2a2418">
+        <div class="card-title" style="color:var(--yellow)">⚠ You often forget these</div>
+        <div id="forgetChips"></div>
+      </div>
+
+      <div class="card" style="padding-top:4px">
+        <div id="shoppingListEl"><div class="empty"><div class="ei">🛒</div><p>Your list is empty.</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── STAPLES screen ── -->
+    <div class="screen" id="screen-staples">
+      <div class="card">
+        <div class="card-title">Always Buy</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="sa-input" placeholder="Item name" style="flex:1" onkeydown="if(event.key==='Enter')addStaple('always')">
+          <button class="btn btn-primary btn-sm" onclick="addStaple('always')">Add</button>
+        </div>
+        <div id="alwaysPills"><span style="color:var(--ink-dim);font-size:13px">None yet</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Often Forget</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="sf-input" placeholder="Item name" style="flex:1" onkeydown="if(event.key==='Enter')addStaple('forget')">
+          <button class="btn btn-secondary btn-sm" onclick="addStaple('forget')">Add</button>
+        </div>
+        <div id="forgetPills"><span style="color:var(--ink-dim);font-size:13px">None yet</span></div>
+      </div>
+    </div>
+
+    <!-- ── INSIGHTS screen ── -->
+    <div class="screen" id="screen-insights">
+      <div id="insightsEl"><div class="empty"><div class="ei">💡</div><p>Add receipts and waste data<br>to see patterns emerge.</p></div></div>
+    </div>
+
+    <!-- ── SETUP screen ── -->
+    <div class="screen" id="screen-setup">
+      <div class="card">
+        <div class="card-title">Budget & Household</div>
+        <div class="row2">
+          <div class="field">
+            <label>Monthly Budget ($)</label>
+            <input type="number" id="s-budget" placeholder="500" oninput="saveSetting('budget',this.value)">
+          </div>
+          <div class="field">
+            <label>Household Size</label>
+            <input type="number" id="s-hh" placeholder="2" oninput="saveSetting('hhSize',this.value)">
+          </div>
+        </div>
+        <div class="field">
+          <label>Primary Stores</label>
+          <input type="text" id="s-stores" placeholder="Trader Joe's, Costco, Vons" oninput="saveSetting('stores',this.value)">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Eating Habits</div>
+        <div class="field">
+          <label>Dietary preferences</label>
+          <input type="text" id="s-diet" placeholder="e.g. mostly plant-based, no shellfish" oninput="saveSetting('diet',this.value)">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Meals at home / week</label>
+            <input type="number" id="s-meals" placeholder="14" oninput="saveSetting('mealsHome',this.value)">
+          </div>
+          <div class="field">
+            <label>Shop frequency</label>
+            <select id="s-freq" onchange="saveSetting('shopFreq',this.value)">
+              <option value="">— select —</option>
+              <option value="daily">Daily</option>
+              <option value="2-3pw">2–3× / week</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="monthly">Monthly bulk</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Biggest challenge</label>
+          <input type="text" id="s-challenge" placeholder="e.g. produce waste, impulse buys" oninput="saveSetting('challenge',this.value)">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">API Key (for receipt scanning)</div>
+        <div class="field">
+          <label>Anthropic API Key</label>
+          <input type="text" id="s-apikey" placeholder="sk-ant-…" oninput="saveSetting('apiKey',this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <p style="font-size:12px;color:var(--ink-mid);line-height:1.5">Your key is stored locally on this device only and never sent anywhere except directly to Anthropic's API.</p>
+      </div>
+      <button class="btn btn-primary" onclick="saveSetup()" style="margin-bottom:24px">Save Settings</button>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- Bottom tab bar -->
+  <div id="tabbar">
+    <button class="tab-btn active" onclick="showTab('receipts')">
+      <span class="tab-icon">🧾</span>
+      <span class="tab-label">Receipts</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('waste')">
+      <span class="tab-icon">🗑</span>
+      <span class="tab-label">Waste</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('list')">
+      <span class="tab-icon">🛒</span>
+      <span class="tab-label">List</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('staples')">
+      <span class="tab-icon">📌</span>
+      <span class="tab-label">Staples</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('insights')">
+      <span class="tab-icon">💡</span>
+      <span class="tab-label">Insights</span>
+    </button>
+  </div>
+</div><!-- /app -->
+
+<!-- Shopping Mode overlay -->
+<div id="shopMode">
+  <div id="shopMode-header">
+    <h2>🛒 Shopping</h2>
+    <button id="shopMode-close" onclick="closeShopMode()">✕</button>
+  </div>
+  <div id="shopMode-progress">
+    <span>Items remaining</span>
+    <span class="done-count" id="sm-progress">0 / 0</span>
+  </div>
+  <div id="shopMode-body"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Data store ───────────────────────────────────────────────────────────────
+const KEY = 'pantry_v2';
+let db = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(KEY)) || defaultDb();
+  } catch { return defaultDb(); }
+})();
+function defaultDb() {
+  return { settings: {}, receipts: [], waste: [], staples: { always: [], forget: [] }, list: [] };
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e) { toast('Storage full — some data may not save.'); }
+}
+
+// ── Tab nav ──────────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  const btns = document.querySelectorAll('.tab-btn');
+  const map = ['receipts','waste','list','staples','insights'];
+  const idx = map.indexOf(id);
+  if (idx >= 0) btns[idx].classList.add('active');
+  // Render target
+  if (id === 'receipts') renderReceipts();
+  if (id === 'waste') { renderWaste(); renderRecentChips(); }
+  if (id === 'list') renderList();
+  if (id === 'staples') renderStaples();
+  if (id === 'insights') renderInsights();
+  document.getElementById('main').scrollTop = 0;
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function saveSetting(k, v) { db.settings[k] = v; save(); }
+function saveSetup() {
+  ['budget','hhSize','stores','diet','mealsHome','shopFreq','challenge','apiKey'].forEach(k => {
+    const map = { budget:'s-budget', hhSize:'s-hh', stores:'s-stores', diet:'s-diet', mealsHome:'s-meals', shopFreq:'s-freq', challenge:'s-challenge', apiKey:'s-apikey' };
+    const el = document.getElementById(map[k]);
+    if (el) db.settings[k] = el.value;
+  });
+  save(); updateBudgetStrip();
+  toast('Settings saved ✓');
+  showTab('receipts');
+}
+function loadSettings() {
+  const s = db.settings;
+  const map = { budget:'s-budget', hhSize:'s-hh', stores:'s-stores', diet:'s-diet', mealsHome:'s-meals', shopFreq:'s-freq', challenge:'s-challenge', apiKey:'s-apikey' };
+  Object.entries(map).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el && s[k] !== undefined) el.value = s[k];
+  });
+}
+
+// ── Budget strip ─────────────────────────────────────────────────────────────
+function updateBudgetStrip() {
+  const budget = parseFloat(db.settings.budget) || 0;
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const spent = db.receipts.filter(r => r.date.startsWith(ym)).reduce((s,r) => s + r.total, 0);
+  const wasteAmt = db.waste.filter(w => w.date.startsWith(ym)).reduce((s,w) => s + w.cost, 0);
+  const rem = budget - spent;
+  const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+
+  document.getElementById('bs-spent').textContent = '$' + spent.toFixed(0);
+  document.getElementById('bs-budget').textContent = budget ? '$' + budget.toFixed(0) : '—';
+  document.getElementById('bs-waste').textContent = '$' + wasteAmt.toFixed(0);
+
+  const remEl = document.getElementById('bs-rem');
+  remEl.textContent = budget ? '$' + Math.abs(rem).toFixed(0) + (rem < 0 ? ' over' : '') : '—';
+  remEl.className = 'bstat-val ' + (rem < 0 ? 'over' : rem < budget * 0.15 ? 'warn' : 'good');
+
+  document.getElementById('bs-pct').textContent = Math.round(pct) + '%';
+  const bar = document.getElementById('bs-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'progress-bar-fill' + (pct > 90 ? ' over' : '');
+}
+
+// ── Receipt scanning ─────────────────────────────────────────────────────────
+let currentImageB64 = null;
+let currentMediaType = 'image/jpeg';
+
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Detect media type — API supports jpeg, png, gif, webp
+  const mime = file.type || 'image/jpeg';
+  currentMediaType = ['image/jpeg','image/png','image/gif','image/webp'].includes(mime)
+    ? mime : 'image/jpeg';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    // Override the data URL prefix to match our declared media type
+    currentImageB64 = dataUrl.split(',')[1];
+    document.getElementById('previewImg').src = dataUrl;
+    document.getElementById('previewWrap').style.display = 'block';
+    document.getElementById('uploadZone').style.display = 'none';
+    document.getElementById('scanBtn').style.display = 'flex';
+    document.getElementById('aiResult').style.display = 'none';
+  };
+  reader.onerror = () => toast('Could not read file — try a different image.');
+  reader.readAsDataURL(file);
+}
+
+function clearPreview() {
+  currentImageB64 = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('uploadZone').style.display = 'block';
+  document.getElementById('scanBtn').style.display = 'none';
+  document.getElementById('aiResult').style.display = 'none';
+}
+
+function resetScan() { clearPreview(); }
+
+async function scanReceipt() {
+  if (!currentImageB64) return;
+  const apiKey = db.settings.apiKey || '';
+  if (!apiKey) { toast('Add your Anthropic API key in Settings ⚙'); return; }
+
+  const btn = document.getElementById('scanBtn');
+  document.getElementById('scanError').style.display = 'none';
+  document.getElementById('scanSpinner').style.display = 'inline-block';
+  document.getElementById('scanBtnText').textContent = 'Scanning…';
+  btn.disabled = true;
+
+  try {
+    // Always re-derive media type from the data URL to be safe
+    // FileReader encodes the real type in the data URL prefix
+    const sniffType = (() => {
+      if (!currentImageB64) return 'image/jpeg';
+      // Check magic bytes from base64
+      const head = currentImageB64.substring(0, 16);
+      const bytes = atob(head);
+      const b0 = bytes.charCodeAt(0), b1 = bytes.charCodeAt(1), b2 = bytes.charCodeAt(2), b3 = bytes.charCodeAt(3);
+      if (b0===0x89 && b1===0x50 && b2===0x4E && b3===0x47) return 'image/png';
+      if (b0===0xFF && b1===0xD8) return 'image/jpeg';
+      if (b0===0x47 && b1===0x49 && b2===0x46) return 'image/gif';
+      if (b0===0x52 && b1===0x49 && b2===0x46 && b3===0x46) return 'image/webp';
+      return 'image/jpeg'; // fallback
+    })();
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: sniffType, data: currentImageB64 } },
+            { type: 'text', text: `Extract from this grocery receipt. Return ONLY valid JSON, no markdown:
+{"store":"store name","date":"YYYY-MM-DD","total":0.00,"items":"comma-separated key items (max 10)","breakdown":{"produce":0.00,"protein":0.00,"dairy":0.00,"pantry":0.00,"frozen":0.00,"other":0.00}}
+Rules: breakdown values must sum exactly to total. Estimate each category based on the items and prices visible. If date unclear use today: ${new Date().toISOString().split('T')[0]}.` }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(`${data.error.type}: ${data.error.message} [type sent: ${sniffType}]`);
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+    // Robust JSON extraction — strip markdown, find first { to last }
+    let jsonStr = text;
+    const fenceIdx = text.indexOf('{');
+    const fenceEnd = text.lastIndexOf('}');
+    if (fenceIdx !== -1 && fenceEnd !== -1 && fenceEnd > fenceIdx) {
+      jsonStr = text.substring(fenceIdx, fenceEnd + 1);
+    } else {
+      throw new Error('No JSON found. API returned: ' + text.substring(0, 200));
+    }
+    const parsed = JSON.parse(jsonStr);
+
+    document.getElementById('ai-store').value = parsed.store || '';
+    document.getElementById('ai-date').value = parsed.date || new Date().toISOString().split('T')[0];
+    document.getElementById('ai-total').value = parsed.total || '';
+    document.getElementById('ai-items').value = parsed.items || '';
+
+    // Render breakdown fields — only show categories with non-zero amounts
+    const breakdown = parsed.breakdown || {};
+    const catMeta = [
+      { key:'produce', emoji:'🥦', label:'Produce' },
+      { key:'protein', emoji:'🥩', label:'Protein' },
+      { key:'dairy',   emoji:'🧀', label:'Dairy' },
+      { key:'pantry',  emoji:'🫙', label:'Pantry' },
+      { key:'frozen',  emoji:'🧊', label:'Frozen' },
+      { key:'other',   emoji:'📦', label:'Other' }
+    ];
+    const bfEl = document.getElementById('breakdown-fields');
+    bfEl.innerHTML = catMeta
+      .filter(c => (breakdown[c.key] || 0) > 0)
+      .map(c => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:14px">${c.emoji} ${c.label}</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="color:var(--ink-mid)">$</span>
+          <input type="number" step="0.01" value="${(breakdown[c.key]||0).toFixed(2)}"
+            id="bd-${c.key}"
+            style="width:80px;text-align:right;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:14px;color:var(--ink)"
+            oninput="updateBreakdownTotal()">
+        </div>
+      </div>`).join('');
+
+    // Store full breakdown for saving
+    window._currentBreakdown = breakdown;
+    document.getElementById('aiResult').style.display = 'block';
+
+  } catch(err) {
+    const errBox = document.getElementById('scanError');
+    errBox.textContent = 'ERROR: ' + (err.message || 'unknown');
+    errBox.style.display = 'block';
+    toast('Scan failed — see error above');
+  } finally {
+    document.getElementById('scanSpinner').style.display = 'none';
+    document.getElementById('scanBtnText').textContent = '✦ Scan with AI';
+    btn.disabled = false;
+  }
+}
+
+function updateBreakdownTotal() {
+  const cats = ['produce','protein','dairy','pantry','frozen','other'];
+  let sum = 0;
+  cats.forEach(k => {
+    const el = document.getElementById('bd-' + k);
+    if (el) sum += parseFloat(el.value) || 0;
+  });
+  // Show running total vs receipt total
+  const receiptTotal = parseFloat(document.getElementById('ai-total').value) || 0;
+  const diff = (sum - receiptTotal).toFixed(2);
+  const diffEl = document.getElementById('bd-diff');
+  if (diffEl) {
+    diffEl.textContent = diff == 0 ? '✓ Balanced' : (diff > 0 ? `+$${diff} over` : `-$${Math.abs(diff)} under`);
+    diffEl.style.color = diff == 0 ? 'var(--green)' : 'var(--orange)';
+  }
+}
+
+function saveAiReceipt() {
+  const store = document.getElementById('ai-store').value.trim();
+  const date = document.getElementById('ai-date').value;
+  const total = parseFloat(document.getElementById('ai-total').value);
+  if (!store || !date || isNaN(total)) { toast('Please check store, date, and total.'); return; }
+
+  // Collect breakdown from editable fields
+  const cats = ['produce','protein','dairy','pantry','frozen','other'];
+  const breakdown = {};
+  cats.forEach(k => {
+    const el = document.getElementById('bd-' + k);
+    if (el) breakdown[k] = parseFloat(el.value) || 0;
+    else breakdown[k] = window._currentBreakdown?.[k] || 0;
+  });
+
+  // Primary category = largest spend
+  const primary = cats.reduce((a, b) => (breakdown[a]||0) > (breakdown[b]||0) ? a : b, 'other');
+
+  db.receipts.unshift({ id: Date.now(), store, date, total, category: primary, breakdown, items: document.getElementById('ai-items').value.trim() });
+  save(); updateBudgetStrip(); renderReceipts();
+  clearPreview();
+  toast('Receipt saved ✓');
+}
+
+// ── Render receipts ──────────────────────────────────────────────────────────
+const catEmoji = { produce:'🥦', protein:'🥩', dairy:'🧀', pantry:'🫙', frozen:'🧊', other:'📦' };
+function renderReceipts() {
+  const el = document.getElementById('receiptList');
+  if (!db.receipts.length) { el.innerHTML = '<div class="empty"><div class="ei">🧾</div><p>No receipts yet.<br>Scan your first one above.</p></div>'; return; }
+  el.innerHTML = db.receipts.map(r => `
+    <div class="receipt-item">
+      <div class="receipt-icon">${catEmoji[r.category] || '📦'}</div>
+      <div class="receipt-info">
+        <div class="receipt-store">${r.store}</div>
+        <div class="receipt-meta">${r.date} · <span class="tag tag-${r.category}">${r.category}</span>${r.items ? ' · ' + r.items.split(',').slice(0,3).join(', ') : ''}</div>
+      </div>
+      <div class="receipt-amt">$${r.total.toFixed(2)}</div>
+      <button onclick="deleteReceipt(${r.id})" style="background:none;border:none;color:var(--ink-dim);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</button>
+    </div>`).join('');
+}
+
+function deleteReceipt(id) {
+  db.receipts = db.receipts.filter(r => r.id !== id);
+  save(); updateBudgetStrip(); renderReceipts();
+}
+
+// ── Waste ────────────────────────────────────────────────────────────────────
+function renderRecentChips() {
+  const card = document.getElementById('recentPurchasesCard');
+  const chips = document.getElementById('recentChips');
+  if (!db.receipts.length) { card.style.display = 'none'; return; }
+
+  // Last 10 unique items across recent receipts
+  const items = [];
+  db.receipts.slice(0, 5).forEach(r => {
+    if (r.items) r.items.split(',').forEach(it => {
+      const name = it.trim();
+      if (name && !items.find(i => i.name.toLowerCase() === name.toLowerCase()))
+        items.push({ name, store: r.store, id: r.id, total: r.total });
+    });
+  });
+
+  if (!items.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  chips.innerHTML = items.slice(0, 12).map(it =>
+    `<span class="purchase-chip" onclick="quickWaste('${encodeURIComponent(it.name)}','${it.store}')">
+      🗑 ${it.name}
+      <span class="chip-store">${it.store.split(' ')[0]}</span>
+    </span>`
+  ).join('');
+}
+
+function quickWaste(encodedName, store) {
+  const name = decodeURIComponent(encodedName);
+  db.waste.unshift({ id: Date.now(), item: name, cost: 0, date: new Date().toISOString().split('T')[0], reason: 'forgot', category: 'other', notes: `From ${store}` });
+  save(); updateBudgetStrip(); renderWaste(); renderRecentChips();
+  toast(`${name} logged as wasted — edit cost if you know it.`);
+}
+
+function addWaste() {
+  const item = document.getElementById('w-item').value.trim();
+  const cost = parseFloat(document.getElementById('w-cost').value) || 0;
+  const date = document.getElementById('w-date').value;
+  if (!item || !date) { toast('Fill in item and date.'); return; }
+  db.waste.unshift({ id: Date.now(), item, cost, date, reason: document.getElementById('w-reason').value, category: document.getElementById('w-cat').value, notes: '' });
+  save(); updateBudgetStrip(); renderWaste();
+  document.getElementById('w-item').value = '';
+  document.getElementById('w-cost').value = '';
+  toast('Waste logged ✓');
+}
+
+function deleteWaste(id) { db.waste = db.waste.filter(w => w.id !== id); save(); updateBudgetStrip(); renderWaste(); }
+
+const reasonLabel = { forgot:'Forgotten', toomuch:'Too much bought', expired:'Expired', mealchange:'Plans changed', other:'Other' };
+function renderWaste() {
+  const el = document.getElementById('wasteList');
+  if (!db.waste.length) { el.innerHTML = '<div class="empty"><div class="ei">🗑</div><p>Nothing wasted yet.</p></div>'; return; }
+  el.innerHTML = db.waste.map(w => `
+    <div class="waste-item">
+      <div class="waste-dot"></div>
+      <div class="waste-info">
+        <div class="waste-name">${w.item}</div>
+        <div class="waste-meta">${w.date} · ${reasonLabel[w.reason] || w.reason}${w.notes ? ' · ' + w.notes : ''}</div>
+      </div>
+      <div class="waste-cost">${w.cost > 0 ? '$' + w.cost.toFixed(2) : '—'}</div>
+      <button class="waste-del" onclick="deleteWaste(${w.id})">×</button>
+    </div>`).join('');
+}
+
+// ── Shopping list ────────────────────────────────────────────────────────────
+// Aisle order: produce → dairy → protein → frozen → pantry → other
+const aisleOrder = ['produce','dairy','protein','frozen','pantry','other'];
+const aisleLabel = { produce:'🥦 Produce', dairy:'🧀 Dairy & Eggs', protein:'🥩 Meat & Protein', frozen:'🧊 Frozen', pantry:'🫙 Pantry & Dry', other:'📦 Other' };
+
+function addListItem() {
+  const name = document.getElementById('li-name').value.trim();
+  if (!name) return;
+  db.list.push({ id: Date.now(), name, cat: document.getElementById('li-cat').value, qty: document.getElementById('li-qty').value.trim(), checked: false });
+  save(); renderList();
+  document.getElementById('li-name').value = '';
+  document.getElementById('li-qty').value = '';
+}
+
+function toggleListItem(id) {
+  const it = db.list.find(i => i.id === id);
+  if (it) { it.checked = !it.checked; save(); renderList(); }
+}
+
+function deleteListItem(id) { db.list = db.list.filter(i => i.id !== id); save(); renderList(); }
+
+function clearChecked() { db.list = db.list.filter(i => !i.checked); save(); renderList(); }
+
+function loadStaples() {
+  const existing = new Set(db.list.map(i => i.name.toLowerCase()));
+  db.staples.always.forEach(s => {
+    if (!existing.has(s.toLowerCase()))
+      db.list.push({ id: Date.now() + Math.random(), name: s, cat: 'other', qty: '', checked: false });
+  });
+  save(); renderList(); toast('Staples added ✓');
+}
+
+function renderList() {
+  const el = document.getElementById('shoppingListEl');
+  const remCard = document.getElementById('forgetReminder');
+  const remChips = document.getElementById('forgetChips');
+
+  // Forget reminders
+  if (db.staples.forget.length) {
+    const inList = new Set(db.list.map(i => i.name.toLowerCase()));
+    const missing = db.staples.forget.filter(s => !inList.has(s.toLowerCase()));
+    if (missing.length) {
+      remCard.style.display = 'block';
+      remChips.innerHTML = missing.map(s =>
+        `<span class="purchase-chip" onclick="addFromForget('${encodeURIComponent(s)}')" style="border-color:#3a2e18;background:#1e1a10;color:var(--yellow)">+ ${s}</span>`
+      ).join('');
+    } else { remCard.style.display = 'none'; }
+  } else { remCard.style.display = 'none'; }
+
+  if (!db.list.length) { el.innerHTML = '<div class="empty"><div class="ei">🛒</div><p>Your list is empty.</p></div>'; return; }
+
+  const groups = {};
+  aisleOrder.forEach(a => groups[a] = []);
+  db.list.forEach(i => { const g = groups[i.cat] || groups['other']; g.push(i); });
+
+  el.innerHTML = aisleOrder.filter(a => groups[a].length).map(a => `
+    <div class="list-section-head">${aisleLabel[a]}</div>
+    ${groups[a].map(i => `
+      <div class="list-item">
+        <button class="check-btn ${i.checked ? 'checked' : ''}" onclick="toggleListItem(${i.id})">${i.checked ? '✓' : ''}</button>
+        <span class="list-item-name ${i.checked ? 'done' : ''}">${i.name}</span>
+        <span class="list-item-qty">${i.qty || ''}</span>
+        <button class="list-item-del" onclick="deleteListItem(${i.id})">×</button>
+      </div>`).join('')}
+  `).join('');
+}
+
+function addFromForget(encoded) {
+  const name = decodeURIComponent(encoded);
+  db.list.push({ id: Date.now(), name, cat: 'other', qty: '', checked: false });
+  save(); renderList();
+}
+
+// ── Shopping Mode ────────────────────────────────────────────────────────────
+function openShopMode() {
+  renderShopMode();
+  document.getElementById('shopMode').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeShopMode() {
+  document.getElementById('shopMode').classList.remove('open');
+  document.body.style.overflow = '';
+  renderList();
+}
+
+function renderShopMode() {
+  const body = document.getElementById('shopMode-body');
+  const prog = document.getElementById('sm-progress');
+  if (!db.list.length) {
+    body.innerHTML = '<div class="empty" style="padding-top:60px"><div class="ei">✓</div><p>List is empty.<br>Add items in the List tab.</p></div>';
+    prog.textContent = 'Nothing to buy';
+    return;
+  }
+  const total = db.list.length;
+  const done = db.list.filter(i => i.checked).length;
+  prog.innerHTML = `<span>${total - done} left</span><span class="done-count">${done} / ${total} done</span>`;
+
+  const groups = {};
+  aisleOrder.forEach(a => groups[a] = []);
+  db.list.forEach(i => { const g = groups[i.cat] || groups['other']; g.push(i); });
+
+  body.innerHTML = aisleOrder.filter(a => groups[a].length).map(a => `
+    <div class="list-section-head" style="font-size:13px;padding:16px 0 8px">${aisleLabel[a]}</div>
+    ${groups[a].map(i => `
+      <div class="shop-item" onclick="shopToggle(${i.id})">
+        <div class="shop-check ${i.checked ? 'checked' : ''}">${i.checked ? '✓' : ''}</div>
+        <span class="shop-name ${i.checked ? 'done' : ''}">${i.name}</span>
+        <span class="shop-qty">${i.qty || ''}</span>
+      </div>`).join('')}
+  `).join('');
+}
+
+function shopToggle(id) {
+  const it = db.list.find(i => i.id === id);
+  if (it) { it.checked = !it.checked; save(); renderShopMode(); }
+}
+
+// ── Staples ──────────────────────────────────────────────────────────────────
+function addStaple(list) {
+  const id = list === 'always' ? 'sa-input' : 'sf-input';
+  const val = document.getElementById(id).value.trim();
+  if (!val) return;
+  if (!db.staples[list].includes(val)) { db.staples[list].push(val); save(); }
+  document.getElementById(id).value = '';
+  renderStaples();
+}
+function removeStaple(list, item) {
+  db.staples[list] = db.staples[list].filter(s => s !== item);
+  save(); renderStaples();
+}
+function renderStaples() {
+  ['always','forget'].forEach(list => {
+    const el = document.getElementById(list + 'Pills');
+    if (!db.staples[list].length) { el.innerHTML = '<span style="color:var(--ink-dim);font-size:13px">None yet</span>'; return; }
+    el.innerHTML = db.staples[list].map(s =>
+      `<span class="staple-pill">${s}<span class="staple-del" onclick="removeStaple('${list}','${encodeURIComponent(s)}')"> ×</span></span>`
+    ).join('');
+  });
+}
+
+// Fix: removeStaple called with encoded name
+const _origRemove = removeStaple;
+window.removeStaple = (list, encodedItem) => {
+  const item = decodeURIComponent(encodedItem);
+  db.staples[list] = db.staples[list].filter(s => s !== item);
+  save(); renderStaples();
+};
+
+// ── Insights ─────────────────────────────────────────────────────────────────
+function renderInsights() {
+  const el = document.getElementById('insightsEl');
+  if (!db.receipts.length && !db.waste.length) {
+    el.innerHTML = '<div class="empty"><div class="ei">💡</div><p>Add receipts and waste data<br>to see patterns emerge.</p></div>';
+    return;
+  }
+
+  const parts = [];
+  const totalSpend = db.receipts.reduce((s,r) => s+r.total, 0);
+  const totalWaste = db.waste.reduce((s,w) => s+w.cost, 0);
+  const wastePct = totalSpend > 0 ? (totalWaste/totalSpend*100).toFixed(1) : null;
+
+  // Top recommendation
+  let topRec = null;
+  if (db.waste.length >= 2) {
+    const wCats = {};
+    db.waste.forEach(w => wCats[w.category] = (wCats[w.category]||0)+1);
+    const topCat = Object.entries(wCats).sort((a,b)=>b[1]-a[1])[0];
+    const wItems = {};
+    db.waste.forEach(w => wItems[w.item] = (wItems[w.item]||0)+1);
+    const topItem = Object.entries(wItems).sort((a,b)=>b[1]-a[1])[0];
+    if (topItem && topItem[1] >= 2) topRec = `You've wasted <strong>${topItem[0]}</strong> ${topItem[1]}× — try buying half as much each trip.`;
+    else if (topCat) topRec = `Your most wasted category is <strong>${topCat[0]}</strong>. Consider smaller quantities.`;
+  } else if (wastePct && parseFloat(wastePct) > 10) {
+    topRec = `You're wasting ~<strong>${wastePct}%</strong> of your grocery spend. Logging waste helps reduce it.`;
+  }
+
+  if (topRec) {
+    parts.push(`<div class="insight-top"><div class="it-label">✦ Top recommendation</div><div class="it-text">${topRec}</div></div>`);
+  }
+
+  // Stats card
+  const stats = [];
+  if (db.receipts.length) {
+    const avg = totalSpend / db.receipts.length;
+    stats.push(`<div class="pattern-row"><h4>Avg spend per trip: $${avg.toFixed(2)}</h4><p>${db.receipts.length} trip(s) tracked · $${totalSpend.toFixed(2)} total</p></div>`);
+
+    const stores = {};
+    db.receipts.forEach(r => stores[r.store] = (stores[r.store]||0)+1);
+    const top = Object.entries(stores).sort((a,b)=>b[1]-a[1])[0];
+    if (top) stats.push(`<div class="pattern-row"><h4>Most visited: ${top[0]}</h4><p>${top[1]} trip(s)</p></div>`);
+
+    // Build category totals from breakdown data where available
+    const cats = {};
+    db.receipts.forEach(r => {
+      if (r.breakdown) {
+        Object.entries(r.breakdown).forEach(([k,v]) => { if (v > 0) cats[k] = (cats[k]||0) + v; });
+      } else {
+        cats[r.category] = (cats[r.category]||0) + r.total;
+      }
+    });
+    const catSorted = Object.entries(cats).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    if (catSorted.length) stats.push(`<div class="pattern-row"><h4>Top spend: ${catSorted[0][0]}</h4><p>${catSorted.map(([c,v])=>`${c} $${v.toFixed(0)}`).join(' · ')}</p></div>`);
+  }
+  if (db.waste.length) {
+    stats.push(`<div class="pattern-row"><h4>Estimated waste: $${totalWaste.toFixed(2)}${wastePct ? ` (${wastePct}% of spend)` : ''}</h4><p>${db.waste.length} item(s) logged</p></div>`);
+    const reasons = {};
+    db.waste.forEach(w => reasons[w.reason] = (reasons[w.reason]||0)+1);
+    const topR = Object.entries(reasons).sort((a,b)=>b[1]-a[1])[0];
+    const rMap = { forgot:'forgetting items were there', toomuch:'buying too much', expired:'items expiring fast', mealchange:'changing meal plans', other:'various reasons' };
+    if (topR) stats.push(`<div class="pattern-row"><h4>Top waste driver: ${rMap[topR[0]]||topR[0]}</h4><p>${topR[1]} occurrence(s)</p></div>`);
+  }
+
+  if (stats.length) parts.push(`<div class="card">${stats.join('')}</div>`);
+  el.innerHTML = parts.join('') || '<div class="empty"><p>Keep adding data — patterns will appear.</p></div>';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, dur = 2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSettings();
+updateBudgetStrip();
+renderReceipts();
+renderStaples();
+renderList();
+
+// Set today for date inputs
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('w-date').value = today;
+
+// Drag-drop on upload zone
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const dt = new DataTransfer(); dt.items.add(file);
+    const fakeInput = { files: dt.files };
+    handleFile(fakeInput);
+  }
+});
+</script>
+</body>
+</html>
